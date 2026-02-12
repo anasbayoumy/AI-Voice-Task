@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Audio Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff; }
+    button { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; }
+    #log { 
+      background: #000; 
+      padding: 10px; 
+      height: 400px; 
+      overflow-y: auto; 
+      border: 1px solid #333;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+    .log-line { margin: 2px 0; }
+    .info { color: #4ade80; }
+    .warn { color: #fbbf24; }
+    .error { color: #ef4444; }
+  </style>
+</head>
+<body>
+  <h1>🔊 Audio Test</h1>
+  <button onclick="testBeep()">Test Beep (880Hz)</button>
+  <button onclick="testWebSocket()">Test WebSocket</button>
+  <button onclick="clearLog()">Clear Log</button>
+  <div id="log"></div>
+
+  <script>
+    const log = (msg, type = 'info') => {
+      const div = document.createElement('div');
+      div.className = `log-line ${type}`;
+      div.textContent = `[${new Date().toISOString().split('T')[1].slice(0, -1)}] ${msg}`;
+      document.getElementById('log').appendChild(div);
+      document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
+    };
+
+    const clearLog = () => {
+      document.getElementById('log').innerHTML = '';
+    };
+
+    function generateTestBeep(frequency, duration, sampleRate = 24000) {
+      const samples = Math.floor(sampleRate * duration);
+      const buffer = new Int16Array(samples);
+      
+      for (let i = 0; i < samples; i++) {
+        const t = i / sampleRate;
+        const amplitude = Math.sin(2 * Math.PI * frequency * t) * 0.5;
+        buffer[i] = Math.floor(amplitude * 16000);
+      }
+      
+      let binary = '';
+      const bytes = new Uint8Array(buffer.buffer);
+      for (let i = 0; i < bytes.byteLength; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      return btoa(binary);
+    }
+
+    async function testBeep() {
+      log('🎵 Testing audio playback...', 'info');
+      
+      try {
+        const audioContext = new AudioContext({ sampleRate: 48000 });
+        await audioContext.resume();
+        log(`✅ AudioContext created, state: ${audioContext.state}`, 'info');
+        
+        const base64Audio = generateTestBeep(880, 0.5);
+        log(`📦 Generated beep: ${base64Audio.length} chars`, 'info');
+        
+        // Decode
+        const binary = atob(base64Audio);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) {
+          bytes[i] = binary.charCodeAt(i);
+        }
+        const pcm16 = new Int16Array(bytes.buffer);
+        const float32 = new Float32Array(pcm16.length);
+        for (let i = 0; i < pcm16.length; i++) {
+          float32[i] = pcm16[i] / 32768;
+        }
+        
+        log(`🔢 Decoded: ${pcm16.length} samples`, 'info');
+        
+        const buffer = audioContext.createBuffer(1, float32.length, 24000);
+        buffer.copyToChannel(float32, 0, 0);
+        log(`🎼 Created buffer: ${float32.length} samples @ 24kHz = ${(float32.length / 24000).toFixed(2)}s`, 'info');
+        
+        const source = audioContext.createBufferSource();
+        source.buffer = buffer;
+        source.connect(audioContext.destination);
+        source.start(0);
+        log('▶️  Playing...', 'info');
+        
+        source.onended = () => {
+          log('✅ Playback finished!', 'info');
+        };
+        
+      } catch (err) {
+        log(`❌ Error: ${err.message}`, 'error');
+      }
+    }
+
+    async function testWebSocket() {
+      log('🌐 Connecting to ws://localhost:8080/web...', 'info');
+      
+      const ws = new WebSocket('ws://localhost:8080/web');
+      
+      ws.onopen = () => {
+        log('✅ WebSocket connected', 'info');
+        log('📤 Sending fake audio...', 'info');
+        
+        const fakeAudio = btoa('test audio data');
+        ws.send(JSON.stringify({
+          type: 'input_audio_buffer.append',
+          audio: fakeAudio
+        }));
+      };
+      
+      ws.onmessage = async (event) => {
+        log('📥 Received message', 'info');
+        const msg = JSON.parse(event.data);
+        log(`   Type: ${msg.type}`, 'info');
+        log(`   Payload length: ${msg.payload?.length || 0}`, 'info');
+        
+        if (msg.type === 'audio' && msg.payload) {
+          log('🔊 Playing received audio...', 'info');
+          
+          try {
+            const audioContext = new AudioContext({ sampleRate: 48000 });
+            await audioContext.resume();
+            
+            const binary = atob(msg.payload);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) {
+              bytes[i] = binary.charCodeAt(i);
+            }
+            const pcm16 = new Int16Array(bytes.buffer);
+            const float32 = new Float32Array(pcm16.length);
+            for (let i = 0; i < pcm16.length; i++) {
+              float32[i] = pcm16[i] / 32768;
+            }
+            
+            const buffer = audioContext.createBuffer(1, float32.length, 24000);
+            buffer.copyToChannel(float32, 0, 0);
+            
+            const source = audioContext.createBufferSource();
+            source.buffer = buffer;
+            source.connect(audioContext.destination);
+            source.start(0);
+            
+            log('▶️  Playing received audio...', 'info');
+            source.onended = () => {
+              log('✅ Playback complete!', 'info');
+              ws.close();
+            };
+          } catch (err) {
+            log(`❌ Playback error: ${err.message}`, 'error');
+            ws.close();
+          }
+        }
+      };
+      
+      ws.onerror = (err) => {
+        log(`❌ WebSocket error: ${err}`, 'error');
+      };
+      
+      ws.onclose = () => {
+        log('🔌 WebSocket closed', 'warn');
+      };
+    }
+
+    log('✅ Test page loaded. Click buttons to test.', 'info');
+  </script>
+</body>
+</html>

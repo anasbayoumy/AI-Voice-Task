@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Microphone Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #fff; }
+    button { padding: 10px 20px; margin: 10px; font-size: 16px; cursor: pointer; }
+    #log { background: #000; padding: 10px; height: 400px; overflow-y: auto; border: 1px solid #333; }
+    #volume { font-size: 24px; color: #4ade80; }
+  </style>
+</head>
+<body>
+  <h1>🎤 Microphone Volume Test</h1>
+  <button onclick="testMic()">Start Mic Test</button>
+  <button onclick="stopMic()">Stop</button>
+  <div id="volume">Volume: ---</div>
+  <div id="log"></div>
+
+  <script>
+    let audioContext = null;
+    let workletNode = null;
+    let stream = null;
+
+    const log = (msg) => {
+      const div = document.createElement('div');
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      document.getElementById('log').appendChild(div);
+      document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
+    };
+
+    async function testMic() {
+      try {
+        log('🎤 Requesting microphone...');
+        stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        log('✅ Mic access granted');
+
+        audioContext = new AudioContext({ sampleRate: 48000 });
+        await audioContext.resume();
+        log(`✅ AudioContext: ${audioContext.state}`);
+
+        await audioContext.audioWorklet.addModule('/AudioProcessor.js');
+        workletNode = new AudioWorkletNode(audioContext, 'audio-processor');
+        log('✅ AudioWorklet loaded');
+
+        workletNode.port.onmessage = (e) => {
+          if (e.data?.type === 'debug') {
+            log(e.data.data);
+          } else if (e.data?.type === 'audio' && e.data?.data) {
+            // Convert ArrayBuffer to base64 for volume calculation
+            const arrayBuffer = e.data.data;
+            const bytes = new Uint8Array(arrayBuffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            const base64 = btoa(binary);
+            
+            // Decode base64 to calculate volume
+            const decoded = atob(base64);
+            const decodedBytes = new Uint8Array(decoded.length);
+            for (let i = 0; i < decoded.length; i++) {
+              decodedBytes[i] = decoded.charCodeAt(i);
+            }
+            const pcm16 = new Int16Array(decodedBytes.buffer);
+            
+            let sum = 0;
+            for (let i = 0; i < pcm16.length; i++) {
+              const s = pcm16[i];
+              sum += s * s;
+            }
+            const volume = Math.sqrt(sum / pcm16.length);
+            
+            document.getElementById('volume').textContent = `Volume: ${volume.toFixed(2)} (Threshold: 1000)`;
+            
+            if (volume > 100) {
+              log(`🔊 Volume: ${volume.toFixed(2)}`);
+            }
+          }
+        };
+
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(workletNode);
+        workletNode.connect(audioContext.destination); // CRITICAL: Must connect to destination
+        log('✅ Mic connected! Speak now...');
+
+      } catch (err) {
+        log(`❌ Error: ${err.message}`);
+      }
+    }
+
+    function stopMic() {
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+      }
+      if (audioContext) {
+        audioContext.close();
+      }
+      log('🛑 Stopped');
+    }
+  </script>
+</body>
+</html>

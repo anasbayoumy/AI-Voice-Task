@@ -1,0 +1,15 @@
+services:
+  server:
+    image: ghcr.io/${GITHUB_REPOSITORY}/server:latest
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

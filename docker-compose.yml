@@ -1,0 +1,21 @@
+services:
+  server:
+    build: ./server
+    ports:
+      - "8080:8080"
+    env_file:
+      - ./server/.env
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+
+  ngrok:
+    image: ngrok/ngrok:latest
+    command: http server:8080
+    ports:
+      - "4040:4040"  # Ngrok dashboard
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    depends_on:
+      - server
+    restart: unless-stopped

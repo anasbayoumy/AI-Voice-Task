@@ -1,0 +1,628 @@
+/* ============================================
+   RETRO FUTURE TERMINAL - MARCIN AI AGENT (IMPROVED)
+   ============================================ */
+
+.marcin-agent {
+  width: 100%;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #0a0a0a;
+  font-family: 'Courier New', monospace;
+  color: #00ff41;
+  overflow: hidden;
+  position: relative;
+}
+
+/* ============================================
+   HEADER
+   ============================================ */
+
+.pixel-header {
+  background: #0a0a0a;
+  border-bottom: 2px solid #00f3ff;
+  padding: 14px 20px;
+  text-align: center;
+  box-shadow: 0 2px 0 #00f3ff;
+  z-index: 100;
+}
+
+.pixel-title {
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 3px;
+  color: #00f3ff;
+  text-shadow: 0 0 10px #00f3ff;
+  margin-bottom: 6px;
+}
+
+.pixel-status {
+  font-size: 13px;
+  color: #00ff41;
+  letter-spacing: 1px;
+  text-shadow: 0 0 5px #00ff41;
+}
+
+.status-indicator {
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
+}
+
+/* ============================================
+   GAME ROOM
+   ============================================ */
+
+.game-room {
+  flex: 1;
+  position: relative;
+  background: linear-gradient(to bottom, #0a0a0a 0%, #001a1a 100%);
+  overflow: hidden;
+  perspective: 1000px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Wireframe Grid Floor */
+.room-floor {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50%;
+  background: 
+    repeating-linear-gradient(
+      0deg,
+      transparent 0px,
+      transparent 49px,
+      #00f3ff 49px,
+      #00f3ff 50px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      transparent 0px,
+      transparent 49px,
+      #00f3ff 49px,
+      #00f3ff 50px
+    );
+  transform: rotateX(60deg);
+  transform-origin: bottom center;
+  z-index: 1;
+  opacity: 0.3;
+}
+
+/* Back Wall */
+.room-wall {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+/* ============================================
+   THE DOOR (SCI-FI AIRLOCK)
+   ============================================ */
+
+.door-container {
+  transform-style: preserve-3d;
+  perspective: 800px;
+  cursor: pointer;
+  transition: transform 0.3s;
+}
+
+.door-container:hover {
+  transform: scale(1.05);
+}
+
+.door-frame {
+  width: 160px;
+  height: 240px;
+  background: #0a0a0a;
+  border: 3px solid #00f3ff;
+  position: relative;
+  box-shadow: 0 0 25px rgba(0, 243, 255, 0.5),
+              4px 4px 0px #00f3ff;
+  transform-style: preserve-3d;
+}
+
+.door-panel {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to right, 
+    #001a1a 0%, 
+    #002a2a 20%,
+    #003a3a 50%,
+    #002a2a 80%,
+    #001a1a 100%
+  );
+  border: 2px solid #00ff41;
+  position: relative;
+  transition: transform 1s ease-in-out;
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  box-shadow: inset 0 0 30px rgba(0, 255, 65, 0.2);
+}
+
+.door-open .door-panel {
+  transform: rotateY(-100deg);
+}
+
+.door-knob {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  background: #00ff41;
+  clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+  box-shadow: 0 0 10px #00ff41;
+}
+
+.door-label {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 20px;
+  font-weight: bold;
+  color: #00ff41;
+  text-shadow: 0 0 12px #00ff41;
+  letter-spacing: 3px;
+  padding: 10px 20px;
+  background: rgba(0, 0, 0, 0.8);
+  border: 2px solid #00ff41;
+  animation: pulse-terminal 2s infinite;
+  white-space: nowrap;
+}
+
+@keyframes pulse-terminal {
+  0%, 100% { 
+    transform: translate(-50%, -50%) scale(1); 
+    box-shadow: 0 0 10px #00ff41;
+  }
+  50% { 
+    transform: translate(-50%, -50%) scale(1.08); 
+    box-shadow: 0 0 18px #00ff41;
+  }
+}
+
+/* ============================================
+   CHARACTER (MARCIN SPRITE)
+   ============================================ */
+
+.character {
+  position: absolute;
+  bottom: 22%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* Entering Animation */
+.character.entering {
+  animation: walkIn 2s ease-out forwards;
+}
+
+@keyframes walkIn {
+  0% {
+    transform: translateX(-50%) scale(0.3);
+    bottom: 42%;
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(-50%) scale(1);
+    bottom: 22%;
+    opacity: 1;
+  }
+}
+
+/* The Sprite */
+.sprite {
+  width: 120px;
+  height: 120px;
+  background-image: url('/marcin_sprites.png');
+  background-size: 400%; /* 4 columns */
+  background-repeat: no-repeat;
+  /* FALLBACK: Cyan box with terminal glow */
+  background-color: #00f3ff;
+  border: 3px solid #00ff41;
+  box-shadow: 0 0 18px #00f3ff,
+              4px 4px 0px #00f3ff;
+  position: relative;
+}
+
+/* Row 1: Idle (blinking/breathing) */
+.sprite-idle {
+  background-position-y: 0%;
+  animation: sprite-idle 1.2s steps(4) infinite;
+}
+
+@keyframes sprite-idle {
+  0% { background-position-x: 0%; }
+  100% { background-position-x: 100%; }
+}
+
+/* Row 2: Walking */
+.sprite-walking {
+  background-position-y: 33.33%;
+  animation: sprite-walking 0.6s steps(4) infinite;
+}
+
+@keyframes sprite-walking {
+  0% { background-position-x: 0%; }
+  100% { background-position-x: 100%; }
+}
+
+/* Row 3: Talking (mouth moving) */
+.sprite-talking {
+  background-position-y: 66.66%;
+  animation: sprite-talking 0.4s steps(4) infinite;
+}
+
+@keyframes sprite-talking {
+  0% { background-position-x: 0%; }
+  100% { background-position-x: 100%; }
+}
+
+/* Character Nameplate */
+.character-nameplate {
+  margin-top: 10px;
+  padding: 6px 16px;
+  background: #0a0a0a;
+  border: 2px solid #00ff41;
+  color: #00ff41;
+  font-size: 13px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-shadow: 0 0 8px #00ff41;
+  box-shadow: 0 0 10px rgba(0, 255, 65, 0.5),
+              3px 3px 0px #00ff41;
+}
+
+/* ============================================
+   BUTTONS
+   ============================================ */
+
+.pixel-button {
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  font-weight: bold;
+  padding: 10px 20px;
+  background: #0a0a0a;
+  color: #00ff41;
+  border: 2px solid #00ff41;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  box-shadow: 3px 3px 0px #00ff41;
+  transition: all 0.1s;
+  text-shadow: 0 0 5px #00ff41;
+}
+
+.pixel-button:hover {
+  background: #00ff41;
+  color: #0a0a0a;
+  box-shadow: 4px 4px 0px #00f3ff;
+  transform: translate(-1px, -1px);
+  text-shadow: none;
+}
+
+.pixel-button:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0px #00ff41;
+}
+
+.exit-button {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 50;
+  background: #0a0a0a;
+  color: #ff0033;
+  border-color: #ff0033;
+  box-shadow: 3px 3px 0px #ff0033;
+  text-shadow: 0 0 5px #ff0033;
+}
+
+.exit-button:hover {
+  background: #ff0033;
+  color: #0a0a0a;
+  box-shadow: 4px 4px 0px #ffaa00;
+}
+
+.retry-button {
+  margin-top: 14px;
+}
+
+/* ============================================
+   ERROR OVERLAY
+   ============================================ */
+
+.error-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.3s;
+  padding: 20px;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.error-box {
+  background: #0a0a0a;
+  border: 3px solid #ff0033;
+  padding: 32px;
+  max-width: 450px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 0 35px rgba(255, 0, 51, 0.8),
+              4px 4px 0px #ff0033;
+}
+
+.error-title {
+  font-size: 18px;
+  color: #ff0033;
+  font-weight: bold;
+  letter-spacing: 2px;
+  margin-bottom: 14px;
+  text-shadow: 0 0 10px #ff0033;
+  animation: blink 1s infinite;
+}
+
+.error-message {
+  color: #00f3ff;
+  font-size: 13px;
+  line-height: 1.7;
+  margin-bottom: 20px;
+  letter-spacing: 0.5px;
+}
+
+/* ============================================
+   FOOTER
+   ============================================ */
+
+.pixel-footer {
+  background: #0a0a0a;
+  border-top: 2px solid #00f3ff;
+  padding: 14px 20px;
+  text-align: center;
+  box-shadow: 0 -2px 0 #00f3ff;
+  z-index: 100;
+}
+
+.footer-text {
+  font-size: 13px;
+  color: #00ff41;
+  letter-spacing: 1px;
+  text-shadow: 0 0 5px #00ff41;
+}
+
+/* ============================================
+   RESPONSIVE - TABLET
+   ============================================ */
+
+@media (max-width: 768px) {
+  .pixel-header {
+    padding: 12px 18px;
+  }
+
+  .pixel-title {
+    font-size: 16px;
+    letter-spacing: 2px;
+  }
+
+  .pixel-status {
+    font-size: 12px;
+  }
+
+  .door-frame {
+    width: 140px;
+    height: 210px;
+    border-width: 2px;
+    box-shadow: 0 0 20px rgba(0, 243, 255, 0.5),
+                3px 3px 0px #00f3ff;
+  }
+
+  .door-label {
+    font-size: 18px;
+    padding: 8px 18px;
+  }
+
+  .sprite {
+    width: 100px;
+    height: 100px;
+  }
+
+  .character {
+    bottom: 18%;
+  }
+
+  .character.entering {
+    animation: walkInTablet 2s ease-out forwards;
+  }
+
+  @keyframes walkInTablet {
+    0% {
+      transform: translateX(-50%) scale(0.3);
+      bottom: 38%;
+      opacity: 0;
+    }
+    100% {
+      transform: translateX(-50%) scale(1);
+      bottom: 18%;
+      opacity: 1;
+    }
+  }
+
+  .exit-button {
+    top: 12px;
+    right: 12px;
+    padding: 8px 16px;
+    font-size: 12px;
+  }
+
+  .error-box {
+    padding: 28px;
+  }
+
+  .error-title {
+    font-size: 16px;
+  }
+}
+
+/* ============================================
+   RESPONSIVE - MOBILE
+   ============================================ */
+
+@media (max-width: 480px) {
+  .pixel-header {
+    padding: 10px 14px;
+  }
+
+  .pixel-title {
+    font-size: 13px;
+    letter-spacing: 1px;
+  }
+
+  .pixel-status {
+    font-size: 10px;
+  }
+
+  .door-frame {
+    width: 110px;
+    height: 170px;
+    border-width: 2px;
+    box-shadow: 0 0 15px rgba(0, 243, 255, 0.5),
+                2px 2px 0px #00f3ff;
+  }
+
+  .door-label {
+    font-size: 15px;
+    padding: 6px 14px;
+    letter-spacing: 2px;
+  }
+
+  .sprite {
+    width: 80px;
+    height: 80px;
+    border-width: 2px;
+    box-shadow: 0 0 15px #00f3ff,
+                3px 3px 0px #00f3ff;
+  }
+
+  .character {
+    bottom: 16%;
+  }
+
+  .character.entering {
+    animation: walkInMobile 2s ease-out forwards;
+  }
+
+  @keyframes walkInMobile {
+    0% {
+      transform: translateX(-50%) scale(0.3);
+      bottom: 36%;
+      opacity: 0;
+    }
+    100% {
+      transform: translateX(-50%) scale(1);
+      bottom: 16%;
+      opacity: 1;
+    }
+  }
+
+  .character-nameplate {
+    font-size: 11px;
+    padding: 5px 12px;
+    box-shadow: 0 0 8px rgba(0, 255, 65, 0.5),
+                2px 2px 0px #00ff41;
+  }
+
+  .exit-button {
+    top: 8px;
+    right: 8px;
+    padding: 6px 12px;
+    font-size: 10px;
+    box-shadow: 2px 2px 0px #ff0033;
+  }
+
+  .pixel-footer {
+    padding: 12px 16px;
+  }
+
+  .footer-text {
+    font-size: 11px;
+  }
+
+  .error-box {
+    padding: 24px;
+    border-width: 2px;
+    box-shadow: 0 0 30px rgba(255, 0, 51, 0.8),
+                3px 3px 0px #ff0033;
+  }
+
+  .error-title {
+    font-size: 14px;
+  }
+
+  .error-message {
+    font-size: 11px;
+  }
+
+  .pixel-button {
+    font-size: 11px;
+    padding: 8px 16px;
+  }
+}
+
+/* ============================================
+   VERY SMALL SCREENS
+   ============================================ */
+
+@media (max-width: 360px) {
+  .pixel-title {
+    font-size: 11px;
+  }
+
+  .door-frame {
+    width: 90px;
+    height: 140px;
+  }
+
+  .door-label {
+    font-size: 12px;
+    padding: 5px 10px;
+  }
+
+  .sprite {
+    width: 70px;
+    height: 70px;
+  }
+
+  .character-nameplate {
+    font-size: 10px;
+    padding: 4px 10px;
+  }
+}
