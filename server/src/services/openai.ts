@@ -209,10 +209,9 @@ export class OpenAIService {
     }
 
     const audioLength = base64Audio?.length || 0;
-    if (audioLength > 0) {
-      logger.debug({ audioLength }, 'Sending audio chunk to OpenAI');
-    } else {
+    if (audioLength === 0) {
       logger.warn('Attempted to send empty audio to OpenAI');
+      return;
     }
 
     this.send({

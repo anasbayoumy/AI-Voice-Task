@@ -30,8 +30,10 @@ export function handleWebConnection(clientWs: WebSocket) {
     let lastSpeechTime = 0;
     let hasCommitted = false;
     let silenceChunks = 0;
+    let lastInterruptTime = 0;
     const SILENCE_THRESHOLD = 150;
-    const SILENCE_CHUNKS_NEEDED = 45;
+    const SILENCE_CHUNKS_NEEDED = 55; // ~1.1s silence - reduces false commits
+    const MIN_MS_SINCE_INTERRUPT = 2000; // Don't commit soon after interrupt (buffer was cleared)
     
     // calculates rms volume from base64 pcm16 audio
     const calculateVolume = (base64Audio: string): number => {
@@ -74,8 +76,12 @@ export function handleWebConnection(clientWs: WebSocket) {
                 } else {
                     silenceChunks++;
                     
-                    // commits audio after ~1 second of silence
-                    if (silenceChunks >= SILENCE_CHUNKS_NEEDED && !hasCommitted && lastSpeechTime > 0 && hasUserSpoken) {
+                    // Don't commit soon after interrupt - buffer was cleared, would cause input_audio_buffer_commit_empty
+                    const msSinceInterrupt = Date.now() - lastInterruptTime;
+                    const canCommit = msSinceInterrupt > MIN_MS_SINCE_INTERRUPT && !openAiService.isAIResponding();
+                    
+                    // Commits audio after ~1.1s of silence (no recent interrupt, AI not already responding)
+                    if (silenceChunks >= SILENCE_CHUNKS_NEEDED && !hasCommitted && lastSpeechTime > 0 && hasUserSpoken && canCommit) {
                         logger.info(`Silence detected after speech (${silenceChunks} chunks, ~${(silenceChunks * 20 / 1000).toFixed(2)}s), committing audio`);
                         openAiService.commitAudio();
                         hasCommitted = true;
@@ -91,6 +97,7 @@ export function handleWebConnection(clientWs: WebSocket) {
                 openAiService.sendAudio(msg.audio);
             } else if (msg.type === 'interrupt') {
                 logger.debug('Client interrupt received');
+                lastInterruptTime = Date.now();
                 openAiService.clearInputBuffer();
                 silenceChunks = 0;
                 hasCommitted = false;

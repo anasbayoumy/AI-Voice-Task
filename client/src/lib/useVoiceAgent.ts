@@ -6,7 +6,11 @@ const baseUrl = base.endsWith('/web') ? base : `${String(base).replace(/\/$/, ''
 const apiKey = import.meta.env.VITE_API_KEY;
 const WS_URL = apiKey ? `${baseUrl}?token=${encodeURIComponent(apiKey)}` : baseUrl;
 
-const BARGE_IN_VOLUME_THRESHOLD = 300;
+// Threshold: real speech typically 400-800, echo often 200-350. 450 allows barge-in while filtering most echo.
+const BARGE_IN_VOLUME_THRESHOLD = 450;
+// Brief cooldown blocks initial speaker blast; 500ms lets you interrupt quickly
+const BARGE_IN_COOLDOWN_MS = 500;
+// Set to true to see mic volume in console - helps tune the threshold
 const VERBOSE_VOLUME_LOGGING = false;
 
 // calculates rms volume from base64 pcm16 audio
@@ -37,6 +41,7 @@ export function useVoiceAgent() {
   const isPlayingRef = useRef(false);
   const currentSourceRef = useRef<AudioBufferSourceNode | null>(null);
   const connectionTimeRef = useRef<number>(0);
+  const aiPlaybackStartRef = useRef<number>(0);
 
   // stops audio playback and clears queue
   const clearAudioQueue = useCallback(() => {
@@ -100,6 +105,10 @@ export function useVoiceAgent() {
         }
       };
       
+      // Only set start time when transitioning from idle to playing (not for every chunk)
+      if (!isPlayingRef.current) {
+        aiPlaybackStartRef.current = Date.now();
+      }
       isPlayingRef.current = true;
       source.start(0);
     } catch (err) {
@@ -168,15 +177,19 @@ export function useVoiceAgent() {
             return;
           }
           
-          if (VERBOSE_VOLUME_LOGGING) {
-            console.log('🎤 Mic audio, volume:', volume.toFixed(2), 'threshold:', BARGE_IN_VOLUME_THRESHOLD);
-          }
-          
           const isAIPlaying = isPlayingRef.current || audioQueueRef.current.length > 0;
           
-          // interrupts ai when user speaks loudly during ai speech
-          if (volume > BARGE_IN_VOLUME_THRESHOLD && isAIPlaying) {
-            console.log('🚫 BARGE-IN triggered! Clearing queue and interrupting...');
+          // Barge-in cooldown: avoid false triggers from speaker echo in first 500ms of AI playback
+          const timeSinceAiStarted = Date.now() - aiPlaybackStartRef.current;
+          const inCooldown = isAIPlaying && timeSinceAiStarted < BARGE_IN_COOLDOWN_MS;
+          
+          if (VERBOSE_VOLUME_LOGGING) {
+            console.log(`🎤 Vol: ${volume.toFixed(0)} | Threshold: ${BARGE_IN_VOLUME_THRESHOLD} | AI: ${isAIPlaying ? 'YES' : 'NO'} | Cooldown: ${inCooldown ? 'YES' : 'NO'}`);
+          }
+          
+          // Interrupts AI only when user speaks loudly during AI speech (and cooldown expired)
+          if (volume > BARGE_IN_VOLUME_THRESHOLD && isAIPlaying && !inCooldown) {
+            console.log('🚫 BARGE-IN triggered! Volume:', volume.toFixed(0));
             clearAudioQueue();
             ws.send(JSON.stringify({ type: 'interrupt' }));
           }
