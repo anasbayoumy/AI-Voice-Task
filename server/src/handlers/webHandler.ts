@@ -27,13 +27,10 @@ export function handleWebConnection(clientWs: WebSocket) {
     );
 
     let chunkCount = 0;
-    let lastSpeechTime = 0;
-    let hasCommitted = false;
-    let silenceChunks = 0;
     let lastInterruptTime = 0;
-    const SILENCE_THRESHOLD = 150;
-    const SILENCE_CHUNKS_NEEDED = 55; // ~1.1s silence - reduces false commits
-    const MIN_MS_SINCE_INTERRUPT = 2000; // Don't commit soon after interrupt (buffer was cleared)
+    
+    // Manual turn detection disabled - OpenAI handles it with server_vad (1.2s silence threshold)
+    // This prevents conflicts and "hello/hi" false detection on first utterance
     
     // calculates rms volume from base64 pcm16 audio
     const calculateVolume = (base64Audio: string): number => {
@@ -63,45 +60,17 @@ export function handleWebConnection(clientWs: WebSocket) {
             if (msg.type === 'input_audio_buffer.append') {
                 chunkCount++;
                 
-                const volume = calculateVolume(msg.audio);
-                
-                if (volume > SILENCE_THRESHOLD) {
-                    if (!hasUserSpoken) {
-                        hasUserSpoken = true;
-                        logger.debug('User started speaking');
-                    }
-                    lastSpeechTime = Date.now();
-                    silenceChunks = 0;
-                    hasCommitted = false;
-                } else {
-                    silenceChunks++;
-                    
-                    // Don't commit soon after interrupt - buffer was cleared, would cause input_audio_buffer_commit_empty
-                    const msSinceInterrupt = Date.now() - lastInterruptTime;
-                    const canCommit = msSinceInterrupt > MIN_MS_SINCE_INTERRUPT && !openAiService.isAIResponding();
-                    
-                    // Commits audio after ~1.1s of silence (no recent interrupt, AI not already responding)
-                    if (silenceChunks >= SILENCE_CHUNKS_NEEDED && !hasCommitted && lastSpeechTime > 0 && hasUserSpoken && canCommit) {
-                        logger.info(`Silence detected after speech (${silenceChunks} chunks, ~${(silenceChunks * 20 / 1000).toFixed(2)}s), committing audio`);
-                        openAiService.commitAudio();
-                        hasCommitted = true;
-                        silenceChunks = 0;
-                        lastSpeechTime = 0;
-                    }
+                if (!hasUserSpoken && calculateVolume(msg.audio) > 150) {
+                    hasUserSpoken = true;
+                    logger.debug('User started speaking');
                 }
                 
-                if (chunkCount % 50 === 0) {
-                    logger.debug(`Received ${chunkCount} chunks, volume: ${volume.toFixed(1)}, silenceChunks: ${silenceChunks}, hasUserSpoken: ${hasUserSpoken}`);
-                }
-                
+                // Simply forward audio to OpenAI - it handles turn detection via server_vad
                 openAiService.sendAudio(msg.audio);
             } else if (msg.type === 'interrupt') {
                 logger.debug('Client interrupt received');
                 lastInterruptTime = Date.now();
                 openAiService.clearInputBuffer();
-                silenceChunks = 0;
-                hasCommitted = false;
-                lastSpeechTime = 0;
             }
 
         } catch (err) {
