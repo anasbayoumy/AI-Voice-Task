@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Biami Voice Agent - Test Client</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+
+        .status-box {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            align-items: center;
+        }
+
+        .status-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: #555;
+        }
+
+        .status-value {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .status-disconnected {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .status-connecting {
+            background: #fff3e0;
+            color: #ef6c00;
+        }
+
+        .status-connected {
+            background: #e8f5e9;
+            color: #2e7d32;
+        }
+
+        .status-error {
+            background: #ffebee;
+            color: #c62828;
+        }
+
+        .test-badge {
+            background: #ffa726;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 8px;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+
+        .config-box {
+            background: #f5f5f5;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        .config-box h3 {
+            margin-bottom: 10px;
+            color: #333;
+            font-size: 16px;
+        }
+
+        .config-item {
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #555;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-connect {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-disconnect {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-test {
+            background: #4caf50;
+            color: white;
+        }
+
+        .log-box {
+            background: #1e1e1e;
+            color: #e0e0e0;
+            border-radius: 10px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .log-entry {
+            margin-bottom: 8px;
+            word-wrap: break-word;
+        }
+
+        .log-info {
+            color: #64b5f6;
+        }
+
+        .log-success {
+            color: #81c784;
+        }
+
+        .log-error {
+            color: #e57373;
+        }
+
+        .log-warning {
+            color: #ffb74d;
+        }
+
+        .info-box {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-size: 13px;
+            color: #1565c0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎙️ Biami Voice Agent</h1>
+        <p class="subtitle">Test Client - WebSocket Connection Testing</p>
+
+        <div class="status-box">
+            <div class="status-item">
+                <span class="status-label">Connection Status:</span>
+                <span id="status" class="status-value status-disconnected">Disconnected</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Messages Sent:</span>
+                <span id="msgSent" class="status-value">0</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Messages Received:</span>
+                <span id="msgReceived" class="status-value">0</span>
+            </div>
+        </div>
+
+        <div class="config-box">
+            <h3>Configuration</h3>
+            <div class="config-item" id="serverUrl">Server: Not set</div>
+            <div class="config-item" id="testMode">Test Mode: Unknown</div>
+        </div>
+
+        <div class="input-group">
+            <label for="wsUrl">WebSocket URL</label>
+            <input 
+                type="text" 
+                id="wsUrl" 
+                placeholder="ws://localhost:2050/voice/stream"
+                value="ws://localhost:2050/voice/stream"
+            >
+        </div>
+
+        <div class="input-group">
+            <label for="apiKey">API Key (Optional for auth)</label>
+            <input 
+                type="text" 
+                id="apiKey" 
+                placeholder="your-secure-api-key-change-me"
+            >
+        </div>
+
+        <div class="button-group">
+            <button id="connectBtn" class="btn-connect">Connect</button>
+            <button id="disconnectBtn" class="btn-disconnect" disabled>Disconnect</button>
+        </div>
+
+        <div class="button-group">
+            <button id="testBtn" class="btn-test" disabled>Send Test Message</button>
+        </div>
+
+        <h3 style="margin-bottom: 10px; color: #333;">Connection Log</h3>
+        <div class="log-box" id="log"></div>
+
+        <div class="info-box">
+            <strong>💡 Test Mode:</strong> Set <code>TEST_MODE=true</code> in server/.env to test WebSocket without OpenAI (saves money). Messages will be echoed back.
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let msgSent = 0;
+        let msgReceived = 0;
+
+        const statusEl = document.getElementById('status');
+        const msgSentEl = document.getElementById('msgSent');
+        const msgReceivedEl = document.getElementById('msgReceived');
+        const logEl = document.getElementById('log');
+        const connectBtn = document.getElementById('connectBtn');
+        const disconnectBtn = document.getElementById('disconnectBtn');
+        const testBtn = document.getElementById('testBtn');
+        const wsUrlInput = document.getElementById('wsUrl');
+        const apiKeyInput = document.getElementById('apiKey');
+        const serverUrlEl = document.getElementById('serverUrl');
+        const testModeEl = document.getElementById('testMode');
+
+        function log(message, type = 'info') {
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logEl.appendChild(entry);
+            logEl.scrollTop = logEl.scrollHeight;
+        }
+
+        function updateStatus(status, className) {
+            statusEl.textContent = status;
+            statusEl.className = `status-value status-${className}`;
+        }
+
+        function updateUI(connected) {
+            connectBtn.disabled = connected;
+            disconnectBtn.disabled = !connected;
+            testBtn.disabled = !connected;
+            wsUrlInput.disabled = connected;
+            apiKeyInput.disabled = connected;
+        }
+
+        connectBtn.addEventListener('click', () => {
+            const wsUrl = wsUrlInput.value;
+            const apiKey = apiKeyInput.value;
+
+            if (!wsUrl) {
+                log('Please enter WebSocket URL', 'error');
+                return;
+            }
+
+            updateStatus('Connecting...', 'connecting');
+            log('Connecting to ' + wsUrl, 'info');
+
+            try {
+                // Add API key as query param if provided
+                const url = apiKey ? `${wsUrl}?token=${encodeURIComponent(apiKey)}` : wsUrl;
+                ws = new WebSocket(url);
+
+                ws.onopen = () => {
+                    updateStatus('Connected', 'connected');
+                    updateUI(true);
+                    log('✓ WebSocket connected!', 'success');
+                    
+                    // Send initial message
+                    const initMsg = { type: 'start', clientType: 'test' };
+                    ws.send(JSON.stringify(initMsg));
+                    msgSent++;
+                    msgSentEl.textContent = msgSent;
+                    log('→ Sent: ' + JSON.stringify(initMsg), 'info');
+                };
+
+                ws.onmessage = (event) => {
+                    msgReceived++;
+                    msgReceivedEl.textContent = msgReceived;
+                    
+                    try {
+                        const data = JSON.parse(event.data);
+                        log('← Received: ' + JSON.stringify(data), 'success');
+                        
+                        // Check for test mode indicator
+                        if (data.type === 'test' || data.type === 'test_response') {
+                            testModeEl.textContent = 'Test Mode: ✓ ENABLED';
+                        }
+                    } catch (e) {
+                        log('← Received (raw): ' + event.data, 'success');
+                    }
+                };
+
+                ws.onerror = (error) => {
+                    log('✗ WebSocket error', 'error');
+                    console.error(error);
+                };
+
+                ws.onclose = () => {
+                    updateStatus('Disconnected', 'disconnected');
+                    updateUI(false);
+                    log('Connection closed', 'warning');
+                    ws = null;
+                };
+
+            } catch (error) {
+                updateStatus('Error', 'error');
+                log('✗ Connection failed: ' + error.message, 'error');
+            }
+        });
+
+        disconnectBtn.addEventListener('click', () => {
+            if (ws) {
+                log('Disconnecting...', 'info');
+                ws.close();
+            }
+        });
+
+        testBtn.addEventListener('click', () => {
+            if (!ws || ws.readyState !== WebSocket.OPEN) {
+                log('Not connected', 'error');
+                return;
+            }
+
+            const testMsg = {
+                type: 'audio',
+                data: 'test-audio-chunk-' + Date.now()
+            };
+            
+            ws.send(JSON.stringify(testMsg));
+            msgSent++;
+            msgSentEl.textContent = msgSent;
+            log('→ Sent test message: ' + JSON.stringify(testMsg), 'info');
+        });
+
+        // Check server health on load
+        fetch(wsUrlInput.value.replace('ws://', 'http://').replace('/voice/stream', '/health'))
+            .then(r => r.json())
+            .then(data => {
+                log('Server health check: ' + JSON.stringify(data), 'success');
+                serverUrlEl.textContent = 'Server: ✓ Online';
+            })
+            .catch(err => {
+                log('Server health check failed', 'error');
+                serverUrlEl.textContent = 'Server: ✗ Offline';
+            });
+
+        log('Test client ready. Click Connect to start.', 'info');
+    </script>
+</body>
+</html>

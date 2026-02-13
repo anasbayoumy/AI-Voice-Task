@@ -1,0 +1,62 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-biami}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-biami_secure_pass}
+      - POSTGRES_DB=biami
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U biami -d biami"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:-admin@biami.io}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:-admin}
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  server:
+    build: ./server
+    ports:
+      - "2050:2050"
+    environment:
+      - PORT=2050
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - DATABASE_URL=postgresql://biami:biami_secure_pass@postgres:5432/biami
+      - API_KEY=${API_KEY}
+      - NODE_ENV=development
+    env_file:
+      - ./server/.env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  ngrok:
+    image: ngrok/ngrok
+    depends_on:
+      - server
+    command: http server:2050
+    ports:
+      - "4040:4040"
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+
+volumes:
+  postgres_data:
+  pgadmin_data:
