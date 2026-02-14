@@ -21,7 +21,9 @@ function App() {
   const [selectedVoice, setSelectedVoice] = useState('coral');
   const [showVoiceSelector, setShowVoiceSelector] = useState(false);
   
-  const { state, connect, disconnect, toggleMute, analyser } = useVoiceAgent('ws://localhost:2050');
+  const { state, connect, disconnect, toggleMute, analyser } = useVoiceAgent(
+    import.meta.env.VITE_API_URL || 'ws://localhost:2050'
+  );
   const { volume } = useAudioVisualizer(analyser);
 
   const handleToggleConnection = async () => {
