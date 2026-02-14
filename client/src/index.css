@@ -13,8 +13,30 @@
   }
   #root {
     min-height: 100vh;
+    min-height: 100dvh;
     width: 100%;
   }
+}
+
+/* Safari WebKit fixes for orb glow - prevents square clipping of blur */
+.orb-glow {
+  transform: translateZ(0);
+  -webkit-filter: blur(60px);
+  filter: blur(60px);
+  will-change: transform;
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+}
+
+/* WebKit backdrop for glassmorphism (Safari) */
+.glass-blur {
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+.glass-backdrop {
+  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(24px);
 }
 
 /* Custom scrollbar for dark theme */

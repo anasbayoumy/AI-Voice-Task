@@ -24,7 +24,7 @@ export function ControlBar({
       transition={{ duration: 0.5, ease: 'easeOut' }}
       className="fixed inset-x-0 bottom-6 sm:bottom-8 z-50 flex justify-center px-4 pointer-events-none"
     >
-      <div className="pointer-events-auto bg-gemini-surface/90 backdrop-blur-xl rounded-full px-4 py-3 sm:px-6 sm:py-4 flex items-center gap-4 sm:gap-6 shadow-2xl border border-white/5">
+      <div className="pointer-events-auto bg-gemini-surface/90 backdrop-blur-xl glass-backdrop rounded-full px-4 py-3 sm:px-6 sm:py-4 flex items-center gap-4 sm:gap-6 shadow-2xl border border-white/5">
         
         {/* Keyboard button (optional) */}
         {onToggleKeyboard && (

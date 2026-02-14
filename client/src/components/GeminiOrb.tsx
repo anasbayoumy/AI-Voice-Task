@@ -55,16 +55,19 @@ export function GeminiOrb({ mode, volume = 0 }: GeminiOrbProps) {
   const isSpeaking = mode === 'speaking';
 
   return (
-    <div className="relative flex items-center justify-center w-full h-full min-w-[200px] min-h-[200px]">
-      {/* Main orb container - responsive: 100% of parent */}
-      <div className="relative w-full h-full max-w-[400px] max-h-[400px] flex items-center justify-center">
+    <div className="relative flex items-center justify-center w-full h-full min-w-[200px] min-h-[200px] overflow-visible">
+      {/* Main orb container - responsive: 100% of parent, overflow-visible for Safari blur */}
+      <div className="relative w-full h-full max-w-[400px] max-h-[400px] flex items-center justify-center overflow-visible">
         
         {/* Background glow layer 1 - Blue - % of container */}
         <motion.div
-          className="absolute w-[70%] h-[70%] rounded-full blur-3xl sm:blur-[64px]"
+          className="orb-glow absolute w-[70%] h-[70%] rounded-full will-change-transform"
           style={{
             background: 'radial-gradient(circle, #4285F4 0%, transparent 70%)',
             mixBlendMode: 'screen',
+            transform: 'translateZ(0)',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
           }}
           animate={isSpeaking ? { scale: speakingScale } : variants ?? {}}
           transition={isSpeaking ? { type: 'spring', stiffness: 300, damping: 20 } : undefined}
@@ -72,11 +75,14 @@ export function GeminiOrb({ mode, volume = 0 }: GeminiOrbProps) {
 
         {/* Background glow layer 2 - Red */}
         <motion.div
-          className="absolute w-[65%] h-[65%] rounded-full blur-3xl sm:blur-[64px]"
+          className="orb-glow absolute w-[65%] h-[65%] rounded-full will-change-transform"
           style={{
             background: 'radial-gradient(circle, #FF5252 0%, transparent 70%)',
             mixBlendMode: 'screen',
             opacity: mode === 'speaking' ? 0.9 : 0.7,
+            transform: 'translateZ(0)',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
           }}
           animate={isSpeaking ? { scale: speakingScale } : variants ?? {}}
           transition={isSpeaking ? { type: 'spring', stiffness: 300, damping: 20 } : undefined}
@@ -84,11 +90,14 @@ export function GeminiOrb({ mode, volume = 0 }: GeminiOrbProps) {
 
         {/* Background glow layer 3 - Cyan accent */}
         <motion.div
-          className="absolute w-[60%] h-[60%] rounded-full blur-3xl sm:blur-[64px]"
+          className="orb-glow absolute w-[60%] h-[60%] rounded-full will-change-transform"
           style={{
             background: 'radial-gradient(circle, #00E5FF 0%, transparent 70%)',
             mixBlendMode: 'lighten',
             opacity: mode === 'listening' ? 0.95 : 0.6,
+            transform: 'translateZ(0)',
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
           }}
           animate={
             isSpeaking
@@ -106,10 +115,10 @@ export function GeminiOrb({ mode, volume = 0 }: GeminiOrbProps) {
 
         {/* Core orb - subtle glass effect */}
         <motion.div
-          className="absolute w-[50%] h-[50%] rounded-full"
+          className="absolute w-[50%] h-[50%] rounded-full glass-blur"
           style={{
             background: 'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.3) 0%, rgba(66,133,244,0.2) 50%, transparent 100%)',
-            backdropFilter: 'blur(10px)',
+            transform: 'translateZ(0)',
             border: '1px solid rgba(255,255,255,0.1)',
             boxShadow: mode === 'speaking'
               ? '0 0 80px rgba(66,133,244,0.6), inset 0 0 40px rgba(255,255,255,0.1)'

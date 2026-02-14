@@ -53,12 +53,12 @@ function App() {
   const CONTROL_BAR_SAFE = 120;
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-gemini-bg">
+    <div className="relative min-h-[100dvh] min-h-screen w-full overflow-hidden bg-gemini-bg">
       {/* Background gradient effect */}
       <div className="absolute inset-0 bg-gradient-to-br from-gemini-bg via-[#0E0E0E] to-[#1a1a2e] opacity-50" />
 
-      {/* Main container - strict flex column centered, no overflow */}
-      <div className="relative z-10 flex flex-col min-h-screen w-full">
+      {/* Main container - strict flex column centered, no overflow. 100dvh fixes mobile Safari address bar */}
+      <div className="relative z-10 flex flex-col min-h-[100dvh] min-h-screen w-full">
         {/* Header - responsive */}
         <motion.header
           initial={{ y: -50, opacity: 0 }}
@@ -99,7 +99,7 @@ function App() {
               transition={{ duration: 0.2 }}
               className="absolute top-20 sm:top-24 right-4 sm:right-8 left-4 sm:left-auto z-50 sm:w-auto max-w-[calc(100vw-2rem)]"
             >
-              <div className="bg-gemini-surface/95 backdrop-blur-xl rounded-2xl border border-white/10 shadow-2xl overflow-hidden min-w-[240px]">
+              <div className="bg-gemini-surface/95 backdrop-blur-xl glass-backdrop rounded-2xl border border-white/10 shadow-2xl overflow-hidden min-w-[240px]">
                 <div className="px-4 py-3 border-b border-white/5">
                   <p className="text-xs text-white/50 uppercase tracking-wider font-medium">Select AI Voice</p>
                 </div>
@@ -179,10 +179,12 @@ function App() {
       {/* Ambient light effect */}
       <div className="absolute inset-0 pointer-events-none">
         <motion.div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full will-change-transform"
           style={{
             background: 'radial-gradient(circle, rgba(66,133,244,0.1) 0%, transparent 70%)',
             filter: 'blur(100px)',
+            WebkitFilter: 'blur(100px)',
+            transform: 'translateZ(0)',
           }}
           animate={{
             scale: state.isConnected ? [1, 1.2, 1] : 1,
