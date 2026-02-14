@@ -1,114 +1,36 @@
-/* ============================================
-   RETRO FUTURE TERMINAL - GLOBAL STYLES
-   ============================================ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-:root {
-  font-family: 'Courier New', 'Roboto Mono', 'Consolas', monospace;
-  line-height: 1.5;
-  font-weight: 400;
-
-  color: #e0e0e0;
-  background-color: #0a0a0a;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+@layer base {
+  html, body {
+    @apply bg-gemini-bg text-white antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+      'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+  }
+  #root {
+    min-height: 100vh;
+    width: 100%;
+  }
 }
 
-* {
-  box-sizing: border-box;
+/* Custom scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
 }
 
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  position: relative;
-  overflow-x: hidden;
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
 }
 
-/* CRT Scanline Overlay Effect */
-body::before {
-  content: '';
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: repeating-linear-gradient(
-    0deg,
-    rgba(0, 0, 0, 0.15) 0px,
-    rgba(0, 0, 0, 0.15) 1px,
-    transparent 1px,
-    transparent 2px
-  );
-  pointer-events: none;
-  z-index: 9999;
-  animation: scanline 8s linear infinite;
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
 }
 
-@keyframes scanline {
-  0% { transform: translateY(0); }
-  100% { transform: translateY(10px); }
-}
-
-a {
-  font-weight: 500;
-  color: #00f3ff;
-  text-decoration: none;
-  text-shadow: 0 0 5px #00f3ff;
-}
-
-a:hover {
-  color: #00ff41;
-  text-shadow: 0 0 8px #00ff41;
-}
-
-h1 {
-  font-size: 2em;
-  line-height: 1.1;
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 3px;
-}
-
-button {
-  border-radius: 0px;
-  border: 2px solid #00f3ff;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 700;
-  font-family: inherit;
-  background-color: #0a0a0a;
-  color: #00f3ff;
-  cursor: pointer;
-  transition: all 0.1s;
-  text-transform: uppercase;
-  letter-spacing: 2px;
-  box-shadow: 4px 4px 0px #00f3ff;
-}
-
-button:hover {
-  background-color: #00f3ff;
-  color: #0a0a0a;
-  box-shadow: 6px 6px 0px #00ff41;
-  transform: translate(-2px, -2px);
-}
-
-button:active {
-  transform: translate(2px, 2px);
-  box-shadow: 2px 2px 0px #00f3ff;
-}
-
-button:focus,
-button:focus-visible {
-  outline: 2px solid #00ff41;
-  outline-offset: 2px;
-}
-
-button:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
-  pointer-events: none;
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
 }

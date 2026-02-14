@@ -1,23 +1,17 @@
-FROM node:20-alpine AS builder
-
-WORKDIR /app
-
-COPY package*.json ./
-RUN npm ci
-
-COPY . .
-RUN npm run build
-
 FROM node:20-alpine
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm ci --omit=dev
+# Copy package files (exclude lock to allow Linux-specific resolution, skips darwin-only fsevents)
+COPY package.json ./
+RUN npm install
 
-COPY --from=builder /app/dist ./dist
+# Copy source
+COPY . .
 
-EXPOSE 8080
+# Build not needed - we run with tsx at runtime
+# Expose port
+EXPOSE 2050
 
-ENV NODE_ENV=production
-CMD ["node", "dist/index.js"]
+# Run with tsx (TypeScript execution)
+CMD ["npx", "tsx", "src/index.ts"]

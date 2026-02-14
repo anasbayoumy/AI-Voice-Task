@@ -1,375 +1,231 @@
-# Biami.io Hybrid AI Voice Agent
+# Biami Voice Agent
 
-> **Status:** Production-Ready Prototype  
-> **Type:** High-Performance WebSocket Relay with Outbound Calling  
-> **Stack:** React (Vite) + Node.js (TypeScript) + OpenAI Realtime API + Twilio
-
----
-
-## Executive Summary
-
-A **low-latency, bidirectional AI voice agent** with support for:
-- 🎙️ **Web Voice** - Browser-based conversations via WebRTC
-- 📞 **Inbound Calls** - Handle phone calls through Twilio
-- 📲 **Outbound Calls** - Programmatic call initiation with context-aware AI
-- 🧠 **Function Calling** - AI can execute tools mid-conversation
-
-**Key Differentiators:**
-- **<500ms Latency** - Instantaneous, human-like responses
-- **Natural Interruptions** - Barge-in support (user can speak over AI)
-- **Context-Aware AI** - Different behaviors for Sales, Support, Demo scenarios
-- **Secure Architecture** - API keys never exposed to client
-
----
-
-## Quick Start
-
-### Prerequisites
-- Docker Desktop
-- Node.js 18+
-- Twilio Account ([sign up](https://www.twilio.com/try-twilio))
-- OpenAI API Key with Realtime API access
-- Ngrok Account ([sign up](https://ngrok.com))
-
-### 1-Minute Setup
-
-```bash
-# 1. Clone repo
-git clone <your-repo> && cd AI-Voice-Task
-
-# 2. Configure root .env
-echo "NGROK_AUTHTOKEN=your_token" > .env
-
-# 3. Configure server/.env (copy example, add credentials)
-cd server && cp .env.example .env
-# Edit: OPENAI_API_KEY, TWILIO_*, SERVER_PUBLIC_URL
-
-# 4. Start backend
-cd .. && docker compose up --build
-
-# 5. Get Ngrok URL
-open http://localhost:4040  # Copy HTTPS URL
-
-# 6. Update server/.env with Ngrok URL, restart
-
-# 7. Configure Twilio webhook (see OUTBOUND_SETUP.md)
-
-# 8. Start frontend
-cd client && npm install && npm run dev
-# Open http://localhost:5173
-```
-
-**Full Setup:** See [OUTBOUND_SETUP.md](./OUTBOUND_SETUP.md)
-
----
-
-## Features
-
-### Web Voice Agent
-- Real-time audio streaming (PCM16 24kHz)
-- Voice Activity Detection (VAD)
-- Barge-in support with volume threshold
-- Test mode (no OpenAI costs)
-
-### Phone Integration (Twilio)
-- **Inbound**: Answer calls automatically
-- **Outbound**: Initiate calls via API
-- **Context-Aware**: AI behavior adapts (Sales vs Support)
-- **Call Control**: Hang up, status tracking
-
-### AI Capabilities (OpenAI Realtime)
-- Low-latency responses (<500ms)
-- Function calling: `check_calendar`, `get_biami_info`
-- Custom system prompts per context
-- Audio transcription available
-
----
+AI voice agent that bridges **web clients** and **Twilio phone calls** to the **OpenAI Realtime API** for real-time voice conversations.
 
 ## Architecture
 
 ```
-┌──────────────┐
-│   Browser    │ ← Web Voice (WebSocket)
-│   (Client)   │
-└──────┬───────┘
-       │
-┌──────▼──────────┐
-│     Ngrok       │ ← Public tunnel (local dev)
-│   (Tunnel)      │
-└──────┬──────────┘
-       │
-┌──────▼──────────────────┐
-│   Node.js Server        │
-│   (Docker Container)    │
-│   - WebSocket Relay     │
-│   - Audio Transcoding   │
-│   - Twilio Integration  │
-└──────┬──────────────────┘
-       │
-       ├─ OpenAI Realtime API (gpt-realtime)
-       └─ Twilio Phone Network
+Browser/Phone → Server (Auth, Validation) → OpenAI Realtime API → Response → User
+                    ↓
+               PostgreSQL (Sessions, Audit)
 ```
 
-**Transport Layer:** WebSocket (Web) + Twilio Media Streams (Phone)  
-**Intelligence Layer:** OpenAI Realtime API  
-**Audio Processing:** PCM16 ↔ G.711 transcoding, 8kHz ↔ 24kHz resampling
+## Tech Stack
 
----
+### Server
+- **Node.js** + **Fastify** — HTTP & WebSocket server
+- **PostgreSQL** — Sessions, conversations, audit log
+- **OpenAI Realtime API** — Voice processing, VAD, turn-taking
+- **TypeScript** — Type safety
+- **Docker** — Postgres, pgAdmin, ngrok
 
-## Context-Based AI
-
-The AI adapts its behavior based on call context:
-
-| Context   | Behavior                          | Use Case                |
-|-----------|----------------------------------|-------------------------|
-| **General** | Professional assistant           | Inbound calls, general  |
-| **Sales**   | Persuasive, highlights benefits  | Outbound sales calls    |
-| **Support** | Patient, helpful troubleshooting | Customer support        |
-| **Demo**    | Friendly, schedules meetings     | Demo booking            |
-
-**Example Outbound Call:**
-```bash
-curl -X POST http://localhost:8080/api/outbound/initiate \
-  -H "Content-Type: application/json" \
-  -d '{"to": "+15555551234", "context": "sales"}'
-```
-
-See [SYSTEM_PROMPTS.md](./SYSTEM_PROMPTS.md) for all prompts and customization.
-
----
-
-## API Reference
-
-### Outbound Calling
-
-#### `POST /api/outbound/initiate`
-Initiates an outbound call.
-
-**Request:**
-```json
-{
-  "to": "+15555551234",
-  "context": "sales",
-  "from": "+12313993815" // Optional
-}
-```
-
-**Response:**
-```json
-{
-  "success": true,
-  "callSid": "CA123...",
-  "status": "queued",
-  "to": "+15555551234",
-  "from": "+12313993815"
-}
-```
-
-#### `POST /api/outbound/hangup/:callSid`
-Hangs up an active call.
-
-#### `GET /api/outbound/status/:callSid`
-Gets call status (queued, ringing, in-progress, completed).
-
-### Webhooks
-
-#### `POST /twilio/voice`
-Twilio voice webhook - returns TwiML with WebSocket Stream URL.
-
-#### `POST /api/outbound/status-callback`
-Receives call status updates from Twilio.
-
----
+### Client
+- **React 18** + **TypeScript** — UI
+- **Vite** — Build & dev server
+- **Tailwind CSS** — Styling
+- **Framer Motion** — Animations
+- **Web Audio API** — Mic capture, PCM resampling, playback
+- **Lucide React** — Icons
 
 ## Project Structure
 
 ```
 AI-Voice-Task/
-├── .env                          # Ngrok auth token
-├── docker-compose.yml            # Ngrok + Server orchestration
-├── SERVER_ARCHITECTURE.md        # Server structure explanation
-├── OUTBOUND_SETUP.md             # Complete setup guide
-├── SYSTEM_PROMPTS.md             # AI prompt reference
-├── QUICK_START.md                # Command reference
+├── client/
+│   ├── src/
+│   │   ├── components/     # GeminiOrb, ControlBar
+│   │   ├── hooks/          # useVoiceAgent, useAudioVisualizer
+│   │   ├── lib/            # utils
+│   │   ├── types/          # VoiceAgentMode, etc.
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── index.html
+│   └── vite.config.ts
 ├── server/
 │   ├── src/
-│   │   ├── index.ts              # Entry point (server init only)
-│   │   ├── config/
-│   │   │   └── env.ts            # Environment validation
-│   │   ├── routes/
-│   │   │   ├── index.ts          # Main router
-│   │   │   ├── health.ts         # Health check endpoint
-│   │   │   ├── cors.ts           # CORS handler
-│   │   │   ├── twilio.ts         # Twilio webhook
-│   │   │   └── outbound.ts       # Outbound API routes
-│   │   ├── handlers/
-│   │   │   ├── webHandler.ts     # Browser WebSocket
-│   │   │   └── twilioHandler.ts  # Phone WebSocket
-│   │   ├── services/
-│   │   │   ├── openai.ts         # OpenAI Realtime API
-│   │   │   ├── tools.ts          # Function calling
-│   │   │   └── twilioOutbound.ts # Twilio API client
-│   │   └── utils/
-│   │       ├── auth.ts           # API key authentication
-│   │       ├── rateLimiter.ts    # Rate limiting
-│   │       ├── bodyReader.ts     # Request body parsing
-│   │       ├── twilioValidate.ts # Signature validation
-│   │       ├── audioTranscode.ts # Audio conversion
-│   │       └── logger.ts         # Structured logging
-│   ├── .env                      # Credentials (Twilio, OpenAI)
-│   ├── Dockerfile
-│   └── package.json
-└── client/
-    ├── src/
-    │   ├── components/
-    │   │   └── Dialer.tsx        # Outbound dialer UI
-    │   ├── lib/
-    │   │   └── useVoiceAgent.ts  # Web voice logic
-    │   ├── App.tsx               # Mode toggle
-    │   └── App.css
-    ├── public/
-    │   └── AudioProcessor.js     # Audio Worklet
-    └── package.json
+│   │   ├── config/         # Env & config
+│   │   ├── controllers/    # Health, Twilio, VoiceStream, Session
+│   │   ├── db/             # Migrations, repositories
+│   │   ├── middleware/     # Auth, rate limit, validation
+│   │   ├── routes/         # API & WebSocket routes
+│   │   ├── services/       # OpenAI, session, audit
+│   │   ├── types/
+│   │   └── index.ts
+│   └── .env.example
+├── docker-compose.yml
+└── README.md
 ```
 
----
+## Quick Start
 
-## Usage
+### 1. Environment
 
-### Web Voice Agent
-1. Open http://localhost:5173
-2. Click **"Start Voice"**
-3. Allow microphone access
-4. Speak naturally - AI responds in real-time
+```bash
+cp .env.example .env
+cp server/.env.example server/.env
+# Edit server/.env: OPENAI_API_KEY, API_KEY
+```
 
-### Outbound Calling
-1. Click **"📞 Outbound Dialer"** tab
-2. Enter phone number (+1 555 555 1234 or 5555551234)
-3. Select context (General, Sales, Support, Demo)
-4. Click **"Call Now"**
-5. Answer phone and speak with AI
-6. AI behavior adapts based on selected context
+### 2. Run with Docker
 
-### Inbound Calling
-- Call your Twilio number (+1 231 399 3815)
-- AI answers automatically with "General" context
-- Speak and hear responses
+```bash
+docker compose up -d
+# ngrok URL: curl -s http://localhost:4040/api/tunnels
+```
 
----
+### 3. Run Locally (Development)
 
-## Cost Estimation
+```bash
+# Server
+cd server && npm install && npm start
 
-### Twilio (per call)
-- **Outbound**: ~$0.013/min (US)
-- **Inbound**: ~$0.0085/min (US)
-- **Phone number**: ~$1.15/month
+# Client (new terminal)
+cd client && npm install && npm run dev
+```
 
-### OpenAI Realtime API (per call)
-- **Audio input**: $0.10 / 1M tokens (~20 hours)
-- **Audio output**: $0.20 / 1M tokens (~10 hours)
-- **Average 5-min call**: $0.50-1.00
+- **Server:** http://localhost:2050  
+- **Client:** http://localhost:5173  
 
-**💡 Tip:** Use `TEST_MODE=true` in `server/.env` during development to avoid OpenAI costs.
+## Build
 
----
+```bash
+# Server
+cd server && npm run build
 
-## Documentation
+# Client
+cd client && npm run build
+```
 
-### 📖 Understanding the Project
-- **[PROJECT_GUIDE.md](./PROJECT_GUIDE.md)** - Complete project overview, architecture, and how everything works
-- **[SERVER_ARCHITECTURE.md](./SERVER_ARCHITECTURE.md)** - Professional server structure and layer responsibilities
-- **[SERVER_STRUCTURE.md](./SERVER_STRUCTURE.md)** - Visual diagrams and file organization
-- **[FUNCTION_REFERENCE.md](./FUNCTION_REFERENCE.md)** - Every function explained in one place
-- **[CLEANUP_SUMMARY.md](./CLEANUP_SUMMARY.md)** - Code cleanup summary and project structure
-- **[RESTRUCTURE_COMPLETE.md](./RESTRUCTURE_COMPLETE.md)** - Server restructuring details
+## API Endpoints
 
-### 🚀 Setup & Configuration
-- **[OUTBOUND_SETUP.md](./OUTBOUND_SETUP.md)** - Complete setup guide (10 parts)
-- **[QUICK_START.md](./QUICK_START.md)** - Command reference
-- **[TWILIO_OPENAI_SETUP.md](./TWILIO_OPENAI_SETUP.md)** - Account setup
+### HTTP
 
-### 🛠️ Features & Implementation
-- **[outbound.md](./outbound.md)** - Outbound calling technical details
-- **[SYSTEM_PROMPTS.md](./SYSTEM_PROMPTS.md)** - AI prompt customization
-- **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** - What was built
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/` | No | Health check |
+| GET | `/health` | No | Health (DB, OpenAI) |
+| POST | `/api/v1/sessions` | Yes | Create session |
+| GET | `/api/v1/sessions/:id` | Yes | Get session |
+| DELETE | `/api/v1/sessions/:id` | Yes | End session |
+| GET | `/api/v1/sessions/:id/history` | Yes | Conversation history |
+| POST | `/incoming-call` | Twilio | Twilio webhook |
 
-### 🔧 Fixes & Testing
-- 🔧 **[COMPLETE_FIX.md](./COMPLETE_FIX.md)** - Latest fixes: Echo, language, audio quality (2026-02-11)
-- **[REALTIME_API_FIX_FINAL.md](./REALTIME_API_FIX_FINAL.md)** - OpenAI API session configuration fixes (2026-02-11)
-- **[TESTING.md](./TESTING.md)** - Testing guide
-- **[TEST_GUIDE.md](./TEST_GUIDE.md)** - Comprehensive test checklist
+### WebSocket
 
-### 🔒 Security & Production
-- 🔒 **[SECURITY.md](./SECURITY.md)** - Production security features (rate limiting, auth, body limits)
-- 🚀 **[PRODUCTION_HARDENING_COMPLETE.md](./PRODUCTION_HARDENING_COMPLETE.md)** - Implementation status & deployment checklist
+| Path | Auth | Description |
+|------|------|-------------|
+| `/voice/stream?sessionId=...` | Token | Web voice streaming |
+| `/media-stream` | Twilio | Phone media stream |
 
-### 🚀 Deployment
-- 📦 **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** - Complete deployment guide for VPS with GitHub Container Registry
-- ⚡ **[VPS_QUICK_START.md](./VPS_QUICK_START.md)** - Quick commands for VPS deployment and updates
+### Auth
 
----
+```bash
+curl -H "Authorization: Bearer YOUR_API_KEY" http://localhost:2050/api/v1/sessions
+curl -H "X-API-Key: YOUR_API_KEY" http://localhost:2050/api/v1/sessions
+```
 
-## Security
+## Client Features
 
-- ✅ Twilio signature validation
-- ✅ Environment variable validation (Zod)
-- ✅ E.164 phone number format validation
-- ✅ API keys never exposed to client
-- ⚠️ **TODO (Production):** Add API authentication, rate limiting, CORS
+- **Gemini-style UI** — Dark theme, orb visualizer
+- **Orb states** — Idle, listening, processing, speaking (volume-driven)
+- **ControlBar** — Connect, disconnect, mute
+- **Voice selection** — Alloy, Echo, Fable, Onyx, Nova, Shimmer, Coral, Sage
+- **Barge-in** — Interrupt AI mid-sentence
+- **Responsive** — Desktop & mobile
 
----
+### Audio Pipeline
 
-## Troubleshooting
+**Capture (Mic → Server):**  
+Mic → resample 24kHz → Float32 → PCM16 → Base64 → WebSocket
 
-### "Ngrok URL changed"
-Free tier gets new URL on restart. Update `server/.env` → `SERVER_PUBLIC_URL` and Twilio webhook.
+**Playback (Server → Speaker):**  
+WebSocket → Base64 → PCM16 → Float32 → buffer → AudioContext → speaker
 
-### "model_not_found"
-Verify OpenAI API key has Realtime API access (`gpt-realtime` model).
+### WebSocket Messages
 
-### "Signature validation failed"
-Ensure `SERVER_PUBLIC_URL` in `server/.env` matches your actual Ngrok URL exactly (with `https://`).
+**Client → Server:**
+```json
+{ "type": "start", "clientType": "voice", "voice": "coral" }
+{ "type": "audio", "data": "[base64]" }
+```
 
-### No audio in calls
-Check Docker logs: `docker logs -f ai-voice-task-server-1`
+**Server → Client:**
+```json
+{ "type": "session", "sessionId": "..." }
+{ "type": "audio", "data": "[base64]" }
+{ "type": "clear" }
+{ "type": "error", "message": "..." }
+```
 
-**More:** See [OUTBOUND_SETUP.md](./OUTBOUND_SETUP.md) Part 7: Troubleshooting
+## Environment Variables
 
----
+### Server (server/.env)
 
-## Next Steps
+```bash
+OPENAI_API_KEY=sk-proj-...
+API_KEY=your-secure-key
+DATABASE_URL=postgresql://...
 
-1. **Test all 4 contexts** (General, Sales, Support, Demo)
-2. **Add call recording** (Twilio RecordingSid)
-3. **Database integration** (log calls, transcripts)
-4. **CRM sync** (Salesforce, HubSpot)
-5. **Analytics dashboard** (call metrics, costs)
-6. **Production deployment** (replace Ngrok with VPS/cloud)
+# Optional
+TEST_MODE=false              # true = mock OpenAI, no API calls
+VAD_TYPE=server_vad          # or semantic_vad
+VAD_THRESHOLD=0.5
+VAD_SILENCE_MS=700
+CORS_ORIGIN=http://localhost:5173
+```
 
----
+### Client (client/.env)
 
-## Contributing
+```bash
+VITE_WS_URL=ws://localhost:2050
+```
 
-1. Fork the repository
-2. Create a feature branch
-3. Commit changes with clear messages
-4. Open a pull request
+## VAD (Voice Activity Detection)
 
----
+OpenAI Realtime API handles noise, pauses, turn-taking automatically.
 
-## License
+**server_vad:** Silence-based (`VAD_THRESHOLD`, `VAD_SILENCE_MS`)  
+**semantic_vad:** AI-based (`VAD_EAGERNESS`: low, medium, high, auto)
 
-MIT
+## Test Mode
 
----
+Set `TEST_MODE=true` in server `.env` to:
 
-## Support
+- Use WebSocket without OpenAI API calls
+- Echo audio back for testing
+- Run without PostgreSQL
 
-- **Issues:** [GitHub Issues](your-repo-url/issues)
-- **Logs:** `docker logs -f ai-voice-task-server-1`
-- **Ngrok Dashboard:** http://localhost:4040
+Test client: http://localhost:2050/test/test-client.html
 
----
+## Docker Services
 
-**Built with:** Node.js, TypeScript, OpenAI Realtime API, Twilio, Docker, Ngrok  
-**Developed by:** Anas Bayoumy | Biami.io Voice Agent Prototype
+| Service | Port |
+|---------|------|
+| postgres | 5432 |
+| pgadmin | 5050 |
+| server | 2050 |
+| ngrok | 4040 |
+
+pgAdmin: http://localhost:5050 (admin@biami.io / admin)
+
+## Database Schema
+
+- `sessions` — Voice sessions (web/phone)
+- `conversations` — Conversation turns
+- `audit_log` — Event logging
+- `agent_config` — AI configuration
+
+## Production Deployment
+
+1. Set strong `API_KEY`, `POSTGRES_PASSWORD`
+2. Use proper `CORS_ORIGIN` (avoid `*`)
+3. Set `AUTH_REQUIRED=true`
+4. Use managed PostgreSQL
+5. Deploy behind reverse proxy, SSL termination
+6. Add logging/metrics
+
+## Resources
+
+- [OpenAI Realtime API](https://platform.openai.com/docs/guides/realtime)
+- [Twilio Media Streams](https://www.twilio.com/docs/voice/twiml/stream)
+- [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)

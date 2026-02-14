@@ -1,61 +1,87 @@
-# dependencies
+# Dependencies
 node_modules/
-
-# build outputs
-dist/
-dist-ssr/
-build/
-*.tsbuildinfo
-
-# environment variables (sensitive)
-.env
-.env.*
-!.env.example
-*.local
-
-# secrets and credentials
-*.key
-*.pem
-*.cert
-*.p12
-credentials.json
-secrets.json
-
-# logs
-*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
-# testing
+# Environment & Secrets (NEVER commit these)
+.env
+.env.local
+.env.*.local
+.env.development
+.env.production
+.env.test
+server/.env
+client/.env
+
+# Build outputs
+dist/
+build/
+.next/
+out/
+.vite/
+*.tsbuildinfo
+client/dist/
+
+# Logs & temp files
+logs/
+*.log
+tmp/
+temp/
+.tmp/
+.temp/
+.cache/
+
+# IDE & editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Docker
+.docker/
+
+# Debug
+*.pid
+*.seed
+*.pid.lock
+.npm
+
+# Test coverage
 coverage/
 .nyc_output/
 *.lcov
 
-# cache
-.cache/
-.parcel-cache/
+# Optional npm cache
+.npm
+
+# Optional eslint cache
 .eslintcache
-.stylelintcache
 
-# os files
-.DS_Store
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# ngrok config (can contain auth tokens)
+ngrok.yml
+ngrok.conf
+
+# Database
+*.sql.backup
+*.dump
+
+# OS
 Thumbs.db
-desktop.ini
+.DS_Store
 
-# editor files
-.idea/
-.vscode/
-*.sw?
-*.swp
-*.swo
-*~
-
-# docker
-docker-compose.override.yml
-
-# misc
-.cursor/
-terminals/
+# Misc
+*.pem
+*.key
+*.crt
+*.p12
+secrets/
