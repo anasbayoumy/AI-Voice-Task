@@ -48,15 +48,18 @@ export class VoiceStreamController {
           const message = typeof data === 'string' ? data : data.toString('utf8');
           const parsed = JSON.parse(message);
 
+          console.log('📥 [VOICE] Received message from client:', parsed.type);
+
           // Handle different message types
           if (parsed.type === 'audio' && parsed.data) {
+            console.log('🎤 [VOICE] Received audio chunk from client, length:', parsed.data.length);
             // Web client sends PCM16 base64
             openAIService.handleClientAudio(parsed.data);
           } else if (parsed.type === 'start') {
-            console.log('Voice client ready');
+            console.log('✅ [VOICE] Client ready signal received');
           }
         } catch (error) {
-          console.error('Error handling voice message:', error);
+          console.error('❌ [VOICE] Error handling voice message:', error);
         }
       });
 

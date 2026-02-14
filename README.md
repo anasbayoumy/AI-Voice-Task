@@ -1,283 +1,231 @@
-# Biami Voice Agent - Production-Ready Server
+# Biami Voice Agent
 
-Enterprise-grade AI voice agent with PostgreSQL, security layers, and OpenAI Realtime API integration.
+AI voice agent that bridges **web clients** and **Twilio phone calls** to the **OpenAI Realtime API** for real-time voice conversations.
 
-## 🎯 What This Does
-
-A complete voice AI system that acts as a **bridge** between:
-- **Phone calls** (via Twilio)
-- **Web browsers** (via WebSocket)
-- **OpenAI Realtime API** (AI voice processing)
-
-OpenAI handles ALL voice activity detection, noise filtering, pauses, and turn-taking automatically.
-
-## 🏗️ Architecture
+## Architecture
 
 ```
-Browser/Phone → Server (Auth/Validation) → OpenAI Realtime → Response → User
+Browser/Phone → Server (Auth, Validation) → OpenAI Realtime API → Response → User
                     ↓
-                PostgreSQL (Sessions/Audit)
+               PostgreSQL (Sessions, Audit)
 ```
 
-## 🚀 Quick Start
+## Tech Stack
 
-### 1. Setup Environment
+### Server
+- **Node.js** + **Fastify** — HTTP & WebSocket server
+- **PostgreSQL** — Sessions, conversations, audit log
+- **OpenAI Realtime API** — Voice processing, VAD, turn-taking
+- **TypeScript** — Type safety
+- **Docker** — Postgres, pgAdmin, ngrok
+
+### Client
+- **React 18** + **TypeScript** — UI
+- **Vite** — Build & dev server
+- **Tailwind CSS** — Styling
+- **Framer Motion** — Animations
+- **Web Audio API** — Mic capture, PCM resampling, playback
+- **Lucide React** — Icons
+
+## Project Structure
+
+```
+AI-Voice-Task/
+├── client/
+│   ├── src/
+│   │   ├── components/     # GeminiOrb, ControlBar
+│   │   ├── hooks/          # useVoiceAgent, useAudioVisualizer
+│   │   ├── lib/            # utils
+│   │   ├── types/          # VoiceAgentMode, etc.
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── index.html
+│   └── vite.config.ts
+├── server/
+│   ├── src/
+│   │   ├── config/         # Env & config
+│   │   ├── controllers/    # Health, Twilio, VoiceStream, Session
+│   │   ├── db/             # Migrations, repositories
+│   │   ├── middleware/     # Auth, rate limit, validation
+│   │   ├── routes/         # API & WebSocket routes
+│   │   ├── services/       # OpenAI, session, audit
+│   │   ├── types/
+│   │   └── index.ts
+│   └── .env.example
+├── docker-compose.yml
+└── README.md
+```
+
+## Quick Start
+
+### 1. Environment
 
 ```bash
-# Copy example env files
 cp .env.example .env
 cp server/.env.example server/.env
-
-# Edit with your keys
-nano server/.env  # Add OPENAI_API_KEY, API_KEY, etc.
+# Edit server/.env: OPENAI_API_KEY, API_KEY
 ```
 
-### 2. Start with Docker
+### 2. Run with Docker
 
 ```bash
-# Start all services (Postgres, pgAdmin, Server, ngrok)
 docker compose up -d
-
-# View logs
-docker compose logs -f server
-
-# Get ngrok public URL
-curl -s http://localhost:4040/api/tunnels | grep -o '"public_url":"https://[^"]*"'
+# ngrok URL: curl -s http://localhost:4040/api/tunnels
 ```
 
-### 3. Start Locally (Development)
+### 3. Run Locally (Development)
 
 ```bash
-cd server
-npm install
-npm start
+# Server
+cd server && npm install && npm start
+
+# Client (new terminal)
+cd client && npm install && npm run dev
 ```
 
-## 📡 API Endpoints
+- **Server:** http://localhost:2050  
+- **Client:** http://localhost:5173  
 
-### HTTP Endpoints
+## Build
+
+```bash
+# Server
+cd server && npm run build
+
+# Client
+cd client && npm run build
+```
+
+## API Endpoints
+
+### HTTP
 
 | Method | Path | Auth | Description |
 |--------|------|------|-------------|
 | GET | `/` | No | Health check |
-| GET | `/health` | No | Detailed health (DB, OpenAI) |
+| GET | `/health` | No | Health (DB, OpenAI) |
 | POST | `/api/v1/sessions` | Yes | Create session |
 | GET | `/api/v1/sessions/:id` | Yes | Get session |
 | DELETE | `/api/v1/sessions/:id` | Yes | End session |
-| GET | `/api/v1/sessions/:id/history` | Yes | Get conversation history |
-| POST | `/incoming-call` | Twilio Sig | Twilio webhook |
+| GET | `/api/v1/sessions/:id/history` | Yes | Conversation history |
+| POST | `/incoming-call` | Twilio | Twilio webhook |
 
-### WebSocket Endpoints
+### WebSocket
 
 | Path | Auth | Description |
 |------|------|-------------|
 | `/voice/stream?sessionId=...` | Token | Web voice streaming |
-| `/media-stream` | Twilio | Phone Media Stream |
+| `/media-stream` | Twilio | Phone media stream |
 
-## 🔐 Authentication
-
-Simple header-based auth for web endpoints:
+### Auth
 
 ```bash
-# Using Authorization header
 curl -H "Authorization: Bearer YOUR_API_KEY" http://localhost:2050/api/v1/sessions
-
-# Using X-API-Key header
 curl -H "X-API-Key: YOUR_API_KEY" http://localhost:2050/api/v1/sessions
 ```
 
-Public endpoints (no auth):
-- `/` - Health
-- `/health` - Detailed health
-- `/incoming-call` - Twilio (validated via signature)
-- `/media-stream` - Twilio (implicit)
+## Client Features
 
-## 🎤 Voice Activity Detection (VAD)
+- **Gemini-style UI** — Dark theme, orb visualizer
+- **Orb states** — Idle, listening, processing, speaking (volume-driven)
+- **ControlBar** — Connect, disconnect, mute
+- **Voice selection** — Alloy, Echo, Fable, Onyx, Nova, Shimmer, Coral, Sage
+- **Barge-in** — Interrupt AI mid-sentence
+- **Responsive** — Desktop & mobile
 
-**OpenAI handles everything** - noise, pauses, interruptions, turn-taking.
+### Audio Pipeline
 
-You can tune behavior in `.env`:
+**Capture (Mic → Server):**  
+Mic → resample 24kHz → Float32 → PCM16 → Base64 → WebSocket
 
-### Server VAD (Default - Silence Detection)
+**Playback (Server → Speaker):**  
+WebSocket → Base64 → PCM16 → Float32 → buffer → AudioContext → speaker
 
-```bash
-VAD_TYPE=server_vad
-VAD_THRESHOLD=0.5        # 0-1, higher = less noise sensitivity
-VAD_SILENCE_MS=700       # Silence duration before turn ends
-VAD_PREFIX_MS=300        # Audio to capture before speech
+### WebSocket Messages
+
+**Client → Server:**
+```json
+{ "type": "start", "clientType": "voice", "voice": "coral" }
+{ "type": "audio", "data": "[base64]" }
 ```
 
-**When to adjust:**
-- **Noisy environment**: `VAD_THRESHOLD=0.7`
-- **Faster responses**: `VAD_SILENCE_MS=400`
-- **Slow speakers**: `VAD_SILENCE_MS=1000`
-
-### Semantic VAD (Alternative - AI Understanding)
-
-```bash
-VAD_TYPE=semantic_vad
-VAD_EAGERNESS=medium     # low | medium | high | auto
+**Server → Client:**
+```json
+{ "type": "session", "sessionId": "..." }
+{ "type": "audio", "data": "[base64]" }
+{ "type": "clear" }
+{ "type": "error", "message": "..." }
 ```
 
-Better for natural conversations, less interruption.
+## Environment Variables
 
-## 🗄️ Database Schema
-
-```sql
-sessions          # Voice sessions (web/phone)
-conversations     # Conversation turns (user/assistant)
-audit_log         # Event logging
-agent_config      # AI configuration (Biami settings)
-```
-
-**pgAdmin** available at `http://localhost:5050`
-- Email: admin@biami.io
-- Password: admin
-
-## 📦 Docker Services
-
-| Service | Port | Description |
-|---------|------|-------------|
-| postgres | 5432 | PostgreSQL database |
-| pgadmin | 5050 | Database admin UI |
-| server | 2050 | Voice agent server |
-| ngrok | 4040 | Tunnel + inspect UI |
-
-## 🔧 Environment Variables
-
-See `server/.env.example` for full list. Key variables:
+### Server (server/.env)
 
 ```bash
-# Required
 OPENAI_API_KEY=sk-proj-...
 API_KEY=your-secure-key
-
-# Database
 DATABASE_URL=postgresql://...
 
-# VAD tuning (optional)
+# Optional
+TEST_MODE=false              # true = mock OpenAI, no API calls
+VAD_TYPE=server_vad          # or semantic_vad
 VAD_THRESHOLD=0.5
 VAD_SILENCE_MS=700
-
-# CORS
-CORS_ORIGIN=http://localhost:3000
+CORS_ORIGIN=http://localhost:5173
 ```
 
-## 🧪 Testing
+### Client (client/.env)
 
 ```bash
-# Health check
-curl http://localhost:2050/
-
-# Detailed health
-curl http://localhost:2050/health
-
-# Create session (requires auth)
-curl -X POST http://localhost:2050/api/v1/sessions \
-  -H "Authorization: Bearer YOUR_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{"source": "web"}'
+VITE_WS_URL=ws://localhost:2050
 ```
 
-## 🔄 Development Workflow
+## VAD (Voice Activity Detection)
 
-```bash
-# Start server with auto-reload
-cd server
-npm run dev
+OpenAI Realtime API handles noise, pauses, turn-taking automatically.
 
-# Run migrations manually
-npm run migrate  # (if you add a migrate script)
+**server_vad:** Silence-based (`VAD_THRESHOLD`, `VAD_SILENCE_MS`)  
+**semantic_vad:** AI-based (`VAD_EAGERNESS`: low, medium, high, auto)
 
-# Check types
-npm run build
-```
+## Test Mode
 
-## 🐛 Troubleshooting
+Set `TEST_MODE=true` in server `.env` to:
 
-### Database connection fails
-```bash
-# Check postgres is running
-docker compose ps postgres
+- Use WebSocket without OpenAI API calls
+- Echo audio back for testing
+- Run without PostgreSQL
 
-# View postgres logs
-docker compose logs postgres
-```
+Test client: http://localhost:2050/test/test-client.html
 
-### OpenAI connection issues
-```bash
-# Verify API key
-echo $OPENAI_API_KEY
+## Docker Services
 
-# Check server logs
-docker compose logs server
-```
+| Service | Port |
+|---------|------|
+| postgres | 5432 |
+| pgadmin | 5050 |
+| server | 2050 |
+| ngrok | 4040 |
 
-### Ngrok tunnel
-```bash
-# Get public URL
-curl -s http://localhost:4040/api/tunnels | jq -r '.tunnels[0].public_url'
+pgAdmin: http://localhost:5050 (admin@biami.io / admin)
 
-# Or visit
-open http://localhost:4040
-```
+## Database Schema
 
-## 📝 Project Structure
+- `sessions` — Voice sessions (web/phone)
+- `conversations` — Conversation turns
+- `audit_log` — Event logging
+- `agent_config` — AI configuration
 
-```
-server/src/
-├── config/           # Environment configuration
-├── db/
-│   ├── client.ts     # PostgreSQL pool
-│   ├── migrations/   # SQL migrations
-│   └── repositories/ # Data access layer
-├── middleware/       # Auth, rate limit, validation
-├── validators/       # Zod schemas
-├── services/         # Business logic
-├── controllers/      # Request handlers
-├── routes/           # Route definitions
-├── types/            # TypeScript types
-└── index.ts          # Entry point
-```
+## Production Deployment
 
-## 🚢 Production Deployment
-
-1. Set strong `API_KEY` and `POSTGRES_PASSWORD`
-2. Use proper `CORS_ORIGIN` (not `*`)
+1. Set strong `API_KEY`, `POSTGRES_PASSWORD`
+2. Use proper `CORS_ORIGIN` (avoid `*`)
 3. Set `AUTH_REQUIRED=true`
-4. Use managed PostgreSQL (AWS RDS, etc.)
-5. Deploy behind reverse proxy (nginx, Cloudflare)
-6. Monitor with logging/metrics
-7. Set up SSL/TLS termination
+4. Use managed PostgreSQL
+5. Deploy behind reverse proxy, SSL termination
+6. Add logging/metrics
 
-## 📊 Monitoring
+## Resources
 
-All sessions and events are logged to database:
-
-```sql
--- Recent sessions
-SELECT * FROM sessions ORDER BY created_at DESC LIMIT 10;
-
--- Audit log
-SELECT * FROM audit_log ORDER BY created_at DESC LIMIT 50;
-
--- Failed sessions
-SELECT * FROM sessions WHERE status = 'error';
-```
-
-## 🎯 Next Steps
-
-1. **Web Client**: Build React/Vue component with Web Audio API
-2. **Phone Integration**: Configure Twilio phone number webhook
-3. **Analytics**: Add dashboards for session metrics
-4. **Scaling**: Add Redis for session state if needed
-
-## 📚 Resources
-
-- [OpenAI Realtime API Docs](https://platform.openai.com/docs/guides/realtime)
+- [OpenAI Realtime API](https://platform.openai.com/docs/guides/realtime)
 - [Twilio Media Streams](https://www.twilio.com/docs/voice/twiml/stream)
-- [PostgreSQL Docs](https://www.postgresql.org/docs/)
-
----
-
-**Built for Biami.io** - Production-ready AI voice agent infrastructure.
+- [Web Audio API](https://developer.mozilla.org/en-US/docs/Web/API/Web_Audio_API)

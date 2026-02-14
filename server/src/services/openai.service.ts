@@ -45,15 +45,56 @@ export class OpenAIService {
   }
 
   private setupTestMode(): void {
-    console.log('🧪 Test mode active - simulating OpenAI responses');
+    console.log('🧪 [TEST] Test mode active - simulating OpenAI responses');
     
     // Send test connection confirmation to client
     setTimeout(() => {
+      console.log('📤 [TEST] Sending test mode message to client');
       this.twilioConnection.send(JSON.stringify({
         type: 'test',
         message: 'Connected in TEST MODE - audio will be echoed back'
       }));
+      
+      // Simulate AI responding after 2 seconds
+      setTimeout(() => {
+        console.log('🔊 [TEST] Simulating AI audio response...');
+        this.sendTestAudio();
+      }, 2000);
     }, 100);
+  }
+  
+  private sendTestAudio(): void {
+    // Generate a simple test tone (440Hz sine wave, 1 second)
+    const sampleRate = 24000;
+    const duration = 1; // 1 second
+    const frequency = 440; // A4 note
+    const amplitude = 0.3;
+    
+    const numSamples = sampleRate * duration;
+    const pcm16 = new Int16Array(numSamples);
+    
+    for (let i = 0; i < numSamples; i++) {
+      const sample = Math.sin(2 * Math.PI * frequency * i / sampleRate) * amplitude;
+      pcm16[i] = Math.round(sample * (sample < 0 ? 0x8000 : 0x7fff));
+    }
+    
+    // Convert to base64
+    const buffer = Buffer.from(pcm16.buffer);
+    const base64 = buffer.toString('base64');
+    
+    console.log('📤 [TEST] Sending test audio chunk, length:', base64.length);
+    
+    // Send in chunks to simulate real streaming
+    const chunkSize = 4800; // ~200ms chunks
+    for (let i = 0; i < base64.length; i += chunkSize) {
+      const chunk = base64.slice(i, i + chunkSize);
+      setTimeout(() => {
+        this.twilioConnection.send(JSON.stringify({
+          type: 'audio',
+          data: chunk
+        }));
+      }, (i / chunkSize) * 200); // 200ms between chunks
+    }
   }
 
   private setupEventHandlers(): void {
@@ -167,7 +208,10 @@ export class OpenAIService {
   }
 
   private handleSpeechStarted(): void {
-    this.send({ type: 'response.cancel' });
+    // Only send cancel if there's an active response (barge-in)
+    if (this.state.lastAssistantItem) {
+      this.send({ type: 'response.cancel' });
+    }
 
     if (!this.state.lastAssistantItem) {
       this.sendClearToClient();
@@ -217,12 +261,16 @@ export class OpenAIService {
   // Handle audio from web client (PCM16 base64)
   handleClientAudio(base64Audio: string): void {
     if (config.openai.testMode) {
-      console.log('🧪 Test mode: received audio chunk');
-      this.twilioConnection.send(JSON.stringify({
-        type: 'test_echo',
-        message: 'Audio chunk received',
-        size: base64Audio.length
-      }));
+      console.log('🧪 [TEST] Received audio chunk from client, length:', base64Audio.length);
+      
+      // Echo back the audio after a short delay to simulate AI processing
+      setTimeout(() => {
+        console.log('🔊 [TEST] Echoing audio back to client');
+        this.twilioConnection.send(JSON.stringify({
+          type: 'audio',
+          data: base64Audio
+        }));
+      }, 500);
       return;
     }
 

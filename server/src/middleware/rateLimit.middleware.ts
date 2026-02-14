@@ -28,8 +28,8 @@ function cleanupOldEntries() {
 }
 
 export async function rateLimitMiddleware(request: FastifyRequest, reply: FastifyReply) {
-  // Skip rate limiting for health check and test UI
-  if (request.url === '/' || request.url === '/health' || request.url.startsWith('/test/')) {
+  // Skip rate limiting for health check, test UI, and WebSocket routes
+  if (request.url === '/' || request.url === '/health' || request.url.startsWith('/test/') || request.url.startsWith('/voice/stream') || request.url.startsWith('/media-stream')) {
     return;
   }
 

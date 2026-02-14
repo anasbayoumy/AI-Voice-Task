@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-biami}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-biami_secure_pass}
+      - POSTGRES_DB=biami
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U biami -d biami"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    # No port expose in prod - only internal to Docker network (optional: expose 5432 if you need external access)
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_EMAIL:-admin@biami.io}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_PASSWORD:-admin}
+      - PGADMIN_CONFIG_SERVER_MODE=False
+    ports:
+      - "127.0.0.1:5050:80"   # Bind to localhost only - access via SSH tunnel or restrict in firewall
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  server:
+    image: ghcr.io/${GITHUB_REPOSITORY}/server:latest
+    ports:
+      - "127.0.0.1:8080:8080"   # Bind locally - nginx proxies externally
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=8080
+      - DATABASE_URL=postgresql://biami:${POSTGRES_PASSWORD:-biami_secure_pass}@postgres:5432/biami
+      - CORS_ORIGIN=https://internal2.clocklo.com
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
+  pgadmin_data:

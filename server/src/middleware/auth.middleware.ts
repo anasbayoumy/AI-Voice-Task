@@ -13,8 +13,13 @@ export async function authMiddleware(request: FastifyRequest, reply: FastifyRepl
     return;
   }
 
-  // Skip auth for voice stream WebSocket (optional for testing)
+  // Skip auth for WebSocket routes (they handle auth internally)
   if (request.url.startsWith('/voice/stream')) {
+    return;
+  }
+
+  // Auth is NOT required if AUTH_REQUIRED is false
+  if (!config.auth.required) {
     return;
   }
 
@@ -28,12 +33,21 @@ export async function authMiddleware(request: FastifyRequest, reply: FastifyRepl
   }
 
   // Constant-time comparison to prevent timing attacks
-  const isValid = crypto.timingSafeEqual(
-    Buffer.from(providedKey),
-    Buffer.from(config.auth.apiKey)
-  );
-
-  if (!isValid) {
+  try {
+    const providedBuffer = Buffer.from(providedKey);
+    const expectedBuffer = Buffer.from(config.auth.apiKey);
+    
+    // Check length first (not constant-time, but necessary for timingSafeEqual)
+    if (providedBuffer.length !== expectedBuffer.length) {
+      return reply.status(401).send({ error: 'Invalid API key' });
+    }
+    
+    const isValid = crypto.timingSafeEqual(providedBuffer, expectedBuffer);
+    
+    if (!isValid) {
+      return reply.status(401).send({ error: 'Invalid API key' });
+    }
+  } catch (error) {
     return reply.status(401).send({ error: 'Invalid API key' });
   }
 }
