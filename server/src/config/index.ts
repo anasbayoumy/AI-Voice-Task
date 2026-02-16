@@ -38,7 +38,11 @@ export const config = {
       
       // Semantic VAD settings (alternative mode)
       eagerness: (process.env.VAD_EAGERNESS || 'medium') as 'low' | 'medium' | 'high' | 'auto'
-    }
+    },
+
+    // Barge-in: allow user to interrupt AI mid-response
+    bargeInEnabled: process.env.BARGE_IN_ENABLED !== 'false', // true = allow barge-in
+    bargeInMinDurationMs: parseInt(process.env.BARGE_IN_MIN_DURATION_MS || '1000', 10), // Only barge-in after user speaks this long (filters noise). 0 = immediate
   },
 
   logging: {
@@ -73,6 +77,7 @@ if (!config.openai.apiKey && !config.openai.testMode) {
 if (config.openai.testMode) {
   console.log('⚠️  TEST MODE ENABLED - OpenAI calls will be mocked (no API charges)');
   console.log('   Set TEST_MODE=false to use real OpenAI API');
+  console.log(`🗣️ Barge-in: ${config.openai.bargeInEnabled ? `enabled (${config.openai.bargeInMinDurationMs}ms gate)` : 'disabled'}`);
 } else {
   // Log VAD configuration on startup
   console.log('🎙️ Voice Activity Detection (VAD) Configuration:');
@@ -85,4 +90,5 @@ if (config.openai.testMode) {
     console.log(`   Eagerness: ${config.openai.vad.eagerness}`);
   }
   console.log('   → OpenAI handles ALL noise detection, pauses, and turn-taking');
+  console.log(`🗣️ Barge-in: ${config.openai.bargeInEnabled ? `enabled (${config.openai.bargeInMinDurationMs}ms gate)` : 'disabled'}`);
 }

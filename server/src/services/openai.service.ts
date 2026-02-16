@@ -9,6 +9,7 @@ export class OpenAIService {
   private sessionId: string | null;
   private audioFormat: 'audio/pcm' | 'audio/pcmu';
   private voiceOverride?: string;
+  private bargeInTimerRef: ReturnType<typeof setTimeout> | null = null;
 
   constructor(twilioConnection: WebSocket, sessionId: string | null = null, audioFormat: 'audio/pcm' | 'audio/pcmu' = 'audio/pcm', voiceOverride?: string) {
     this.twilioConnection = twilioConnection;
@@ -123,7 +124,8 @@ export class OpenAIService {
     
     // Build turn_detection config based on VAD type
     const turnDetection: any = {
-      type: vadConfig.type
+      type: vadConfig.type,
+      interrupt_response: config.openai.bargeInEnabled
     };
 
     if (vadConfig.type === 'server_vad') {
@@ -185,6 +187,10 @@ export class OpenAIService {
       if (response.type === 'input_audio_buffer.speech_started') {
         this.handleSpeechStarted();
       }
+
+      if (response.type === 'input_audio_buffer.speech_stopped') {
+        this.clearBargeInTimer();
+      }
     } catch (error) {
       console.error('Error processing OpenAI message:', error, 'Raw message:', typeof data === 'string' ? data : Buffer.from(data as Buffer).toString('utf8'));
     }
@@ -208,17 +214,36 @@ export class OpenAIService {
   }
 
   private handleSpeechStarted(): void {
-    // Only send cancel if there's an active response (barge-in)
-    if (this.state.lastAssistantItem) {
-      this.send({ type: 'response.cancel' });
-    }
+    if (!config.openai.bargeInEnabled) return;
 
+    const minDurationMs = config.openai.bargeInMinDurationMs;
+    if (minDurationMs > 0) {
+      this.clearBargeInTimer();
+      this.bargeInTimerRef = setTimeout(() => {
+        this.bargeInTimerRef = null;
+        this.executeBargeIn();
+      }, minDurationMs);
+    } else {
+      this.executeBargeIn();
+    }
+  }
+
+  private clearBargeInTimer(): void {
+    if (this.bargeInTimerRef) {
+      clearTimeout(this.bargeInTimerRef);
+      this.bargeInTimerRef = null;
+    }
+  }
+
+  private executeBargeIn(): void {
     if (!this.state.lastAssistantItem) {
       this.sendClearToClient();
       this.state.responseStartTimestampTwilio = null;
       this.state.responseStartTimeMs = null;
       return;
     }
+
+    this.send({ type: 'response.cancel' });
 
     let elapsedTime: number;
     if (this.state.latestMediaTimestamp > 0 && this.state.responseStartTimestampTwilio != null) {
@@ -369,6 +394,7 @@ export class OpenAIService {
   }
 
   close(): void {
+    this.clearBargeInTimer();
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.close();
     }
